@@ -1,0 +1,38 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: regcleaner
+  labels:
+    app: regcleaner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: regcleaner
+  template:
+    metadata:
+      labels:
+        app: regcleaner
+        aadpodidbinding: secret-identity
+    spec:
+      containers:
+      - name: regcleaner
+        image: polyengcr.azurecr.io/regcleanerscheduler:20220418083811
+        command: ["/bin/sh"]
+        args: ["-c", "while true; do echo hello; sleep 10;done"]
+        env:
+          - name: "RegEndpoint"
+            value: "https://polyengcr.azurecr.io"
+          - name: "MonthBack"
+            value: "-3"
+          - name: "CosmosDbName"
+            value: "polydgeusegc-scope-database"
+          - name: "CosmosContainerName"
+            value: "testcontainer"
+         
+
+
+
+         
+          
+       
