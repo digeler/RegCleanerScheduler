@@ -17,8 +17,8 @@ IHost host = Host.CreateDefaultBuilder(args)
                         c.UseUtcTimestamp = true;
                     });
             });
-        services.AddTransient<IRegistryClient,RegistryClient>();
-        services.AddTransient<ICosmosClient,CosmosClients>();
+        services.AddSingleton<IRegistryClient, RegistryClient>();
+        services.AddSingleton<ICosmosClient,CosmosClients>();
         services.AddTransient<DumpAzureContainerRegistryToCosmosAsync>();
     })
     .Build();
@@ -26,5 +26,5 @@ IHost host = Host.CreateDefaultBuilder(args)
         scheduler =>
             scheduler.OnWorker("DumpAzureContainerRegistryToCosmosAsync")
                 .Schedule<DumpAzureContainerRegistryToCosmosAsync>().
-                EveryTenSeconds().PreventOverlapping("DumpAzureContainerRegistry"));
+                EveryTenSeconds().PreventOverlapping("DumpAzureContainerRegistry").RunOnceAtStart());
 await host.RunAsync();

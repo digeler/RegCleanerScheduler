@@ -5,12 +5,15 @@ namespace RegCleanerScheduler ;
 
     public static class GlobalSettings
     {
-        public static string CosmosDbName { get; } = Environment.GetEnvironmentVariable("CosmosDbName") ?? throw new Exception("CosmosDb Env Missing");
+        public static string CosmosDbAccountName { get; } = Environment.GetEnvironmentVariable("CosmosDbAccountName") ?? throw new Exception("CosmosDbAccountName Env Missing");
+        public static string CosmosDbName { get; } = Environment.GetEnvironmentVariable("CosmosDbName") ?? throw new Exception("CosmosDbName Env Missing");
         public static Uri RegEndpoint { get; } = new(Environment.GetEnvironmentVariable("RegEndpoint") ?? throw new Exception("RegEndpoint Env Missing"));
+        public static string AzureManagmentSuffix { get; } = Environment.GetEnvironmentVariable("AzureManagmentSuffix") ?? "azure.com";
         public static string Audience { get; } = Environment.GetEnvironmentVariable("Audience") ?? "Public";
-
+        public static string SubscriptionId { get; } = Environment.GetEnvironmentVariable("SubscriptionId") ?? throw new Exception("Subid Env Missing");
+        public static string ResourceGroup { get; } = Environment.GetEnvironmentVariable("ResourceGroup") ?? throw new Exception("ResourceGroup Env Missing");
         public static string CosmosContainerName { get; } = Environment.GetEnvironmentVariable("CosmosContainerName") ?? "AcrContainer";
-        public static int CosmosThroughPut = Convert.ToInt32(Environment.GetEnvironmentVariable("CosmosThroughPut") ?? 400.ToString());
+        public static int CosmosThroughPut = Convert.ToInt32(Environment.GetEnvironmentVariable("CosmosThroughPut") ?? 1000.ToString());
         public static string CosmosSuffix { get; } = new(Environment.GetEnvironmentVariable("CosmosSuffix") ?? "documents.azure.com");
-        public static string CosmosPartitionKey { get; } = "/LastUpdatedOn";
+        public static string CosmosPartitionKey { get; } = "/LastUpdated";
     }

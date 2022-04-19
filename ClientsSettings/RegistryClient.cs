@@ -4,7 +4,7 @@ using RegCleanerScheduler;
 
 namespace RegCleanerScheduler ;
 
-    public class RegistryClient : IRegistryClient
+    public sealed class RegistryClient : IRegistryClient
     {
         private readonly ILogger<RegistryClient> _logger;
 
@@ -12,19 +12,27 @@ namespace RegCleanerScheduler ;
 
         public async Task<ContainerRegistryClient> GetContainerRegistryClientAsync(CancellationToken cancellationToken)
         {
-            return await Task.Run(
-                () =>
-                    new ContainerRegistryClient(
-                        GlobalSettings.RegEndpoint,
-                        new DefaultAzureCredential(),
-                        new ContainerRegistryClientOptions
-                        {
-                            Audience = GetAudience(GlobalSettings.Audience)
-                        }),
-                cancellationToken);
+            try
+            {
+                return await Task.Run(
+                    () =>
+                        new ContainerRegistryClient(
+                            GlobalSettings.RegEndpoint,
+                            new DefaultAzureCredential(),
+                            new ContainerRegistryClientOptions
+                            {
+                                Audience = GetAudience(GlobalSettings.Audience)
+                            }),
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return null;
         }
 
-        private ContainerRegistryAudience? GetAudience(string audience)
+        private static ContainerRegistryAudience? GetAudience(string audience)
         {
             return audience switch
             {
