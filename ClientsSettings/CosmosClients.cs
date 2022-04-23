@@ -4,9 +4,9 @@ using Microsoft.Azure.Services.AppAuthentication;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace RegCleanerScheduler;
+namespace RegCleanerScheduler ;
 
-public class CosmosClients : ICosmosClient
+    public class CosmosClients : ICosmosClient
     {
         private readonly ILogger<CosmosClients> _logger;
         private readonly HttpClient _httpclient;
@@ -23,6 +23,10 @@ public class CosmosClients : ICosmosClient
             {
                 return await Task.Run(
                     () => new CosmosClient($"https://{GlobalSettings.CosmosDbAccountName}.{GlobalSettings.CosmosSuffix}:443/", new DefaultAzureCredential()));
+            }
+            catch (CosmosException cx)
+            {
+                _logger.LogCritical($"{cx.Diagnostics}\n {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.StatusCode} {cx.GetBaseException()}");
             }
             catch (Exception ex)
             {
@@ -42,15 +46,21 @@ public class CosmosClients : ICosmosClient
                 var result = await _httpclient.PostAsync(endpoint, new StringContent(""), cancellationToken);
                 var keys = await result.Content.ReadFromJsonAsync<CosmosKeys>(cancellationToken: cancellationToken);
 
-                var client = new CosmosClient(
-                    $"https://{GlobalSettings.CosmosDbAccountName}.{GlobalSettings.CosmosSuffix}:443/",
-                    keys.primaryMasterKey,
-                    new CosmosClientOptions
-                    {
-                        ConnectionMode = ConnectionMode.Gateway,
-                        AllowBulkExecution = true
-                    });
-                return client;
+                return await Task.Run(
+                    () =>
+                        new CosmosClient(
+                            $"https://{GlobalSettings.CosmosDbAccountName}.{GlobalSettings.CosmosSuffix}:443/",
+                            keys.primaryMasterKey,
+                            new CosmosClientOptions
+                            {
+                                ConnectionMode = ConnectionMode.Gateway,
+                                AllowBulkExecution = false
+                            }),
+                    cancellationToken);
+            }
+            catch (CosmosException cx)
+            {
+                _logger.LogCritical($"{cx.Diagnostics}\n {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.StatusCode} {cx.GetBaseException()}");
             }
             catch (Exception ex)
             {

@@ -25,9 +25,10 @@ namespace RegCleanerScheduler ;
                             }),
                     cancellationToken);
             }
-            catch (Exception ex)
+
+            catch (Exception cx)
             {
-                Console.WriteLine(ex.Message);
+                _logger.LogCritical($" {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.GetBaseException()}");
             }
             return null;
         }

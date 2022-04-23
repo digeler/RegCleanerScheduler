@@ -34,11 +34,18 @@ namespace RegCleanerScheduler.Operations ;
 
         public async Task Invoke()
         {
-            _logger.LogInformation($"Coravel was invoked with {nameof(DumpAzureContainerRegistryAsync)}");
+            _logger.LogInformation($"invoked with {nameof(DumpAzureContainerRegistryAsync)}");
             _logger.LogInformation("Starting Wait 30 sec for debugging");
             await Task.Delay(30000);
 
-            await DumpAzureContainerRegistryAsync(CancellationToken.None);
+            try
+            {
+                await DumpAzureContainerRegistryAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical($"{ex.Message} \n {ex.StackTrace} \n {ex.InnerException} \n");
+            }
         }
 
         public async Task DumpAzureContainerRegistryAsync(CancellationToken cancellationToken)
@@ -55,13 +62,23 @@ namespace RegCleanerScheduler.Operations ;
 
             try
             {
-                var result = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken).Result.CreateDatabaseIfNotExistsAsync(
+                var cclient = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken);
+
+                var result = await cclient.CreateDatabaseIfNotExistsAsync(
                     GlobalSettings.CosmosDbName,
                     GlobalSettings.CosmosThroughPut,
                     cancellationToken: cancellationToken);
                 _result = result;
 
-                if (result.StatusCode != HttpStatusCode.OK)
+                if (result.StatusCode == HttpStatusCode.Created)
+                {
+                    _logger.LogInformation($"{HttpStatusCode.Created}");
+                }
+                if (result.StatusCode == HttpStatusCode.OK)
+                {
+                    _logger.LogInformation($"{HttpStatusCode.OK}");
+                }
+                else
                 {
                     throw new AuthenticationException("Problem connecting to Cosmos");
                 }
@@ -86,17 +103,23 @@ namespace RegCleanerScheduler.Operations ;
             _logger.LogInformation($"Started operation {nameof(CreateCosmosContainerIfNotExistAsync)}");
             try
             {
-                var cosmoscontainer = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken).
-                    Result.GetDatabase(GlobalSettings.CosmosDbName).
+                var cosmos = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken);
+                var cosmoscontainer = await cosmos.GetDatabase(GlobalSettings.CosmosDbName).
                     CreateContainerIfNotExistsAsync(
                         new ContainerProperties(
                             GlobalSettings.CosmosContainerName,
                             GlobalSettings.CosmosPartitionKey),
                         cancellationToken: cancellationToken);
-                if (cosmoscontainer.StatusCode != HttpStatusCode.OK)
+
+                if (cosmoscontainer.StatusCode == HttpStatusCode.Created)
                 {
-                    throw new ArgumentException("Could not create Container");
+                    _logger.LogInformation($"{HttpStatusCode.Created}");
                 }
+                if (cosmoscontainer.StatusCode == HttpStatusCode.OK)
+                {
+                    _logger.LogInformation($"{HttpStatusCode.OK}");
+                }
+
                 _comoscontainer = cosmoscontainer;
             }
             catch (Exception ex)
@@ -140,7 +163,9 @@ namespace RegCleanerScheduler.Operations ;
                             $"Tag: {tag} \n " +
                             $"Last Updated: {repoproperties.LastUpdatedOn} \n ");
                         _registrymodel.id = $"{repoproperties.RepositoryName}:{tag}";
-                        _registrymodel.LastUpdated = repoproperties.LastUpdatedOn;
+                        _registrymodel.LastUpdated = repoproperties.LastUpdatedOn.ToString("s");
+                        _registrymodel.Tag = tag;
+                        _registrymodel.RepositoryName = repoproperties.RepositoryName;
                         _items++;
 
                         var task = _comoscontainer.Container.CreateItemAsync(_registrymodel, cancellationToken: cancellationToken);
@@ -152,33 +177,34 @@ namespace RegCleanerScheduler.Operations ;
                                     {
                                         if (t.Status == TaskStatus.RanToCompletion)
                                         {
-                                            _logger.LogInformation(t.Result.StatusCode.ToString());
+                                            _logger.LogInformation(t.Status.ToString());
                                         }
                                         else
                                         {
-                                            _logger.LogError(t.Exception.Message);
+                                            _logger.LogError(t.Exception?.GetBaseException().ToString());
                                         }
                                     },
                                     cancellationToken));
 
-                            _logger.LogInformation($"Dump completed with status code {task.Result.StatusCode}");
+                            _logger.LogInformation($"Dump completed with status code {task.Status}");
+                        }
+                        catch (CosmosException cx)
+                        {
+                            _logger.LogCritical($"{cx.Diagnostics}\n {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.StatusCode} {cx.GetBaseException()}");
                         }
                         catch (Exception ex)
                         {
+                            if (ex.Message.Contains("Entity with the specified id already exists in the system"))
+                            {
+                                _logger.LogInformation($"Conflict 409 for {_registrymodel.id}");
+                            }
                             if (ex.Message.Contains("A task was canceled"))
                             {
                                 _logger.LogInformation("A task was cancelled");
                             }
                             else
                             {
-                                if (ex.Message.Contains("Conflict (409)"))
-                                {
-                                    _logger.LogInformation($"Conflict 409 for {_registrymodel.id}");
-                                }
-                                else
-                                {
-                                    _logger.LogCritical($"{ex.Message} \n {ex.InnerException} \n {ex.StackTrace}");
-                                }
+                                _logger.LogCritical($"{ex.Message} \n {ex.InnerException} \n {ex.StackTrace} {ex.GetBaseException()}");
                             }
                         }
                     }

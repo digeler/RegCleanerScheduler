@@ -1,7 +1,9 @@
 ﻿namespace RegCleanerScheduler ;
 
-    public class ContainerRegistryModel
+    public sealed class ContainerRegistryModel
     {
         public string id { get; set; } = string.Empty;
-        public DateTimeOffset LastUpdated { get; set; }
-    }
+        public string LastUpdated { get; set; }
+        public string RepositoryName { get; set; } = String.Empty;
+        public string Tag { get; set; } = String.Empty;
+}

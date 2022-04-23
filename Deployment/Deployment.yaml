@@ -17,14 +17,14 @@ spec:
     spec:
       containers:
       - name: regcleaner
-        image: polyengcr.azurecr.io/regcleanerscheduler:20220419211752
+        image: polyengcr.azurecr.io/regcleanerscheduler:20220423142912
         command: ["/bin/sh"]
         args: ["-c", "while true; do echo hello; sleep 10;done"]
         env:
           - name: "RegEndpoint"
             value: "https://polyengcr.azurecr.io"
-          - name: "MonthBack"
-            value: "-3"
+          - name: "MonthsBack"
+            value: "-31"
           - name: "CosmosDbName"
             value: "acrdb"
           - name: "CosmosDbAccountName"
@@ -35,6 +35,9 @@ spec:
             value: "a9f4e502-9188-4e9c-857f-532dd66f5d0c"
           - name: "ResourceGroup"
             value: "PolyTstUseGc"
+          - name: IsDryRun
+            value: "False"
+           
 
          
 

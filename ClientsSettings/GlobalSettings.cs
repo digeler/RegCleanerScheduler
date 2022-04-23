@@ -15,5 +15,8 @@ namespace RegCleanerScheduler ;
         public static string CosmosContainerName { get; } = Environment.GetEnvironmentVariable("CosmosContainerName") ?? "AcrContainer";
         public static int CosmosThroughPut = Convert.ToInt32(Environment.GetEnvironmentVariable("CosmosThroughPut") ?? 1000.ToString());
         public static string CosmosSuffix { get; } = new(Environment.GetEnvironmentVariable("CosmosSuffix") ?? "documents.azure.com");
+        public static string IsDryRun { get; } = Environment.GetEnvironmentVariable("IsDryRun") ?? "True";
+        public static string MonthsBack { get; } = Environment.GetEnvironmentVariable("MonthsBack") ?? throw new Exception("MonthsBack Env Missing");
+        public static DateTimeOffset TimeAdjust { get; set; } = DateTime.Now.AddMonths(Convert.ToInt32(MonthsBack));
         public static string CosmosPartitionKey { get; } = "/LastUpdated";
     }
