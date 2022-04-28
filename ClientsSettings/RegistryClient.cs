@@ -8,20 +8,23 @@ namespace RegCleanerScheduler ;
     {
         private readonly ILogger<RegistryClient> _logger;
 
-        public RegistryClient(ILogger<RegistryClient> logger) => _logger = logger;
+        public RegistryClient(ILogger <RegistryClient> logger) => _logger = logger;
 
-        public async Task<ContainerRegistryClient> GetContainerRegistryClientAsync(CancellationToken cancellationToken)
+        public async Task<ContainerRegistryClient> GetContainerRegistryClientAsync(
+            CancellationToken cancellationToken,
+            Uri regtestinguri = null,
+            string testAudience = null)
         {
             try
             {
                 return await Task.Run(
                     () =>
                         new ContainerRegistryClient(
-                            GlobalSettings.RegEndpoint,
+                           GlobalSettings.RegEndpoint,
                             new DefaultAzureCredential(),
                             new ContainerRegistryClientOptions
                             {
-                                Audience = GetAudience(GlobalSettings.Audience)
+                                Audience = GetAudience(GlobalSettings.Audience ?? testAudience)
                             }),
                     cancellationToken);
             }
@@ -29,9 +32,20 @@ namespace RegCleanerScheduler ;
             catch (Exception cx)
             {
                 _logger.LogCritical($" {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.GetBaseException()}");
+                return await Task.Run(
+                    () =>
+                        new ContainerRegistryClient(
+                             regtestinguri,
+                            new DefaultAzureCredential(),
+                            new ContainerRegistryClientOptions
+                            {
+                                Audience = GetAudience(testAudience)
+                            }),
+                    cancellationToken);
             }
-            return null;
         }
+
+        
 
         private static ContainerRegistryAudience? GetAudience(string audience)
         {

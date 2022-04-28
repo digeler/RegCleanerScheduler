@@ -23,13 +23,14 @@ var host = Host.CreateDefaultBuilder(args)
             services.AddTransient<QueryImagesAndDeleteAsync>();
         })
     .Build();
+    await Task.Delay(30000);
     host.Services.UseScheduler(
         scheduler =>
         {
-            //scheduler.OnWorker("DumpAzureContainerRegistryToCosmosAsync")
-            //.Schedule<DumpAzureContainerRegistryToCosmosAsync>().
-            //EveryTenSeconds().PreventOverlapping("DumpAzureContainerRegistry").RunOnceAtStart();
-            scheduler.OnWorker("QueryImagesAndDeleteAsync").Schedule<QueryImagesAndDeleteAsync>().
-                EveryTenSeconds().PreventOverlapping("QueryAndDeleteImage").RunOnceAtStart();
+            scheduler.OnWorker("DumpAzureContainerRegistryToCosmosAsync")
+            .Schedule<DumpAzureContainerRegistryToCosmosAsync>().
+            EveryTenSeconds().PreventOverlapping("DumpAzureContainerRegistry").RunOnceAtStart();
+            //scheduler.OnWorker("QueryImagesAndDeleteAsync").Schedule<QueryImagesAndDeleteAsync>().
+            //    EveryTenSeconds().PreventOverlapping("QueryAndDeleteImage").RunOnceAtStart();
         }).OnError(ErrorHandling.HandleException);
     await host.RunAsync();

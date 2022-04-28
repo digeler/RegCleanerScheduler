@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: regcleaner
-        image: polyengcr.azurecr.io/regcleanerscheduler:20220423142912
+        image: polyengcr.azurecr.io/regcleanerscheduler:20220428161215
         command: ["/bin/sh"]
         args: ["-c", "while true; do echo hello; sleep 10;done"]
         env:

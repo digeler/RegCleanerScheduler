@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Worker;Microsoft.NET.Sdk.Publish">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Nullable>disable</Nullable>
+	  <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	  <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+	  <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-RegCleanerScheduler-50149B80-AA23-4196-905D-F7D3CF94AE57</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
@@ -13,6 +15,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="RegCleanerTests\**" />
+    <Content Remove="RegCleanerTests\**" />
+    <EmbeddedResource Remove="RegCleanerTests\**" />
+    <None Remove="RegCleanerTests\**" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.ResourceManager" Version="1.0.0" />
     <PackageReference Include="Microsoft.Azure.Management.ResourceManager.Fluent" Version="1.38.1" />
@@ -27,5 +35,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Operations\" />
+    <Folder Include="Properties\PublishProfiles\" />
   </ItemGroup>
 </Project>

@@ -3,9 +3,9 @@ using Microsoft.Azure.Cosmos;
 
 namespace RegCleanerScheduler ;
 
-    public static class GlobalSettings
+    public  class GlobalSettings
     {
-        public static string CosmosDbAccountName { get; } = Environment.GetEnvironmentVariable("CosmosDbAccountName") ?? throw new Exception("CosmosDbAccountName Env Missing");
+        public  static string CosmosDbAccountName { get; } = Environment.GetEnvironmentVariable("CosmosDbAccountName") ?? throw new Exception("CosmosDbAccountName Env Missing");
         public static string CosmosDbName { get; } = Environment.GetEnvironmentVariable("CosmosDbName") ?? throw new Exception("CosmosDbName Env Missing");
         public static Uri RegEndpoint { get; } = new(Environment.GetEnvironmentVariable("RegEndpoint") ?? throw new Exception("RegEndpoint Env Missing"));
         public static string AzureManagmentSuffix { get; } = Environment.GetEnvironmentVariable("AzureManagmentSuffix") ?? "azure.com";
@@ -16,7 +16,12 @@ namespace RegCleanerScheduler ;
         public static int CosmosThroughPut = Convert.ToInt32(Environment.GetEnvironmentVariable("CosmosThroughPut") ?? 1000.ToString());
         public static string CosmosSuffix { get; } = new(Environment.GetEnvironmentVariable("CosmosSuffix") ?? "documents.azure.com");
         public static string IsDryRun { get; } = Environment.GetEnvironmentVariable("IsDryRun") ?? "True";
-        public static string MonthsBack { get; } = Environment.GetEnvironmentVariable("MonthsBack") ?? throw new Exception("MonthsBack Env Missing");
+        public static string MonthsBack { get; } = Environment.GetEnvironmentVariable("MonthsBack") ?? "36";
         public static DateTimeOffset TimeAdjust { get; set; } = DateTime.Now.AddMonths(Convert.ToInt32(MonthsBack));
         public static string CosmosPartitionKey { get; } = "/LastUpdated";
+
+        static GlobalSettings()
+        {
+            
+        }
     }
