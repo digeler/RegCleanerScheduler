@@ -17,20 +17,20 @@ var host = Host.CreateDefaultBuilder(args)
                             c.UseUtcTimestamp = true;
                         });
                 });
+            services.AddSingleton<GlobalSettings>();
             services.AddSingleton<IRegistryClient, RegistryClient>();
             services.AddSingleton<ICosmosClient, CosmosClients>();
             services.AddTransient<DumpAzureContainerRegistryToCosmosAsync>();
             services.AddTransient<QueryImagesAndDeleteAsync>();
         })
     .Build();
-    await Task.Delay(30000);
     host.Services.UseScheduler(
         scheduler =>
         {
             scheduler.OnWorker("DumpAzureContainerRegistryToCosmosAsync")
-            .Schedule<DumpAzureContainerRegistryToCosmosAsync>().
-            EveryTenSeconds().PreventOverlapping("DumpAzureContainerRegistry").RunOnceAtStart();
-            //scheduler.OnWorker("QueryImagesAndDeleteAsync").Schedule<QueryImagesAndDeleteAsync>().
-            //    EveryTenSeconds().PreventOverlapping("QueryAndDeleteImage").RunOnceAtStart();
+                .Schedule<DumpAzureContainerRegistryToCosmosAsync>().
+                Cron(GlobalSettings.ScheduleDumpCron).PreventOverlapping("DumpAzureContainerRegistry");
+            scheduler.OnWorker("QueryImagesAndDeleteAsync").Schedule<QueryImagesAndDeleteAsync>().
+                Cron(GlobalSettings.ScheduleDeleteImages).PreventOverlapping("QueryAndDeleteImage");
         }).OnError(ErrorHandling.HandleException);
     await host.RunAsync();

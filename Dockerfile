@@ -17,6 +17,7 @@ RUN dotnet publish "RegCleanerScheduler.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# Use This Section When Using Debug Mode ,Remove For Release
 ENTRYPOINT ["dotnet", "RegCleanerScheduler.dll"]
 RUN 	apt-get update ; \
 		apt-get install -y curl procps zip unzip htop wget ; \

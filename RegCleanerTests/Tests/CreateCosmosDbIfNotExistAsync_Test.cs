@@ -54,8 +54,6 @@ namespace Tests ;
                     async () => await ds.CreateCosmosDbIfNotExistAsync(
                         CancellationToken.None,
                         cosmosClient,
-                        TestSettings.CosmosSuffix,
-                        TestSettings.CosmosDbAccountName,
                         TestSettings.CosmosDbName,
                         true));
             }

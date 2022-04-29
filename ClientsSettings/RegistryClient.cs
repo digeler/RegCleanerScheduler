@@ -1,6 +1,5 @@
 ﻿using Azure.Containers.ContainerRegistry;
 using Azure.Identity;
-using RegCleanerScheduler;
 
 namespace RegCleanerScheduler ;
 
@@ -20,7 +19,7 @@ namespace RegCleanerScheduler ;
                 return await Task.Run(
                     () =>
                         new ContainerRegistryClient(
-                           GlobalSettings.RegEndpoint,
+                            GlobalSettings.RegEndpoint,
                             new DefaultAzureCredential(),
                             new ContainerRegistryClientOptions
                             {
@@ -35,7 +34,7 @@ namespace RegCleanerScheduler ;
                 return await Task.Run(
                     () =>
                         new ContainerRegistryClient(
-                             regtestinguri,
+                            regtestinguri,
                             new DefaultAzureCredential(),
                             new ContainerRegistryClientOptions
                             {
@@ -44,8 +43,6 @@ namespace RegCleanerScheduler ;
                     cancellationToken);
             }
         }
-
-        
 
         private static ContainerRegistryAudience? GetAudience(string audience)
         {

@@ -1,9 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-using Microsoft.Azure.Cosmos;
+﻿namespace RegCleanerScheduler ;
 
-namespace RegCleanerScheduler ;
-
-    public  class GlobalSettings
+public  class GlobalSettings
     {
         public  static string CosmosDbAccountName { get; } = Environment.GetEnvironmentVariable("CosmosDbAccountName") ?? throw new Exception("CosmosDbAccountName Env Missing");
         public static string CosmosDbName { get; } = Environment.GetEnvironmentVariable("CosmosDbName") ?? throw new Exception("CosmosDbName Env Missing");
@@ -19,6 +16,8 @@ namespace RegCleanerScheduler ;
         public static string MonthsBack { get; } = Environment.GetEnvironmentVariable("MonthsBack") ?? "36";
         public static DateTimeOffset TimeAdjust { get; set; } = DateTime.Now.AddMonths(Convert.ToInt32(MonthsBack));
         public static string CosmosPartitionKey { get; } = "/LastUpdated";
+        public static string ScheduleDumpCron { get; } = Environment.GetEnvironmentVariable("ScheduleDumpCron") ?? "0 23 * * 0";
+        public static string ScheduleDeleteImages { get; } = Environment.GetEnvironmentVariable("ScheduleDeleteImages") ?? "0 23 * * 1";
 
         static GlobalSettings()
         {

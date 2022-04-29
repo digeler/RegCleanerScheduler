@@ -1,18 +1,14 @@
-﻿using System.Net;
-using System.Runtime.CompilerServices;
-using System.Security.Authentication;
-using Azure.Containers.ContainerRegistry;
+﻿using Azure.Containers.ContainerRegistry;
 using Coravel.Invocable;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Azure.Cosmos.Linq;
-using Microsoft.VisualBasic;
-using RegCleanerScheduler;
+using System.Net;
+using System.Security.Authentication;
 
 namespace RegCleanerScheduler.Operations ;
 
     public class DumpAzureContainerRegistryToCosmosAsync : IInvocable
     {
-        private readonly ILogger <DumpAzureContainerRegistryToCosmosAsync> _logger;
+        private readonly ILogger<DumpAzureContainerRegistryToCosmosAsync> _logger;
         private readonly IRegistryClient _regclient;
         private readonly ICosmosClient _cosmosclient;
         private readonly ContainerRegistryModel _registrymodel;
@@ -24,7 +20,7 @@ namespace RegCleanerScheduler.Operations ;
         private ContainerResponse _comoscontainer;
 
         public DumpAzureContainerRegistryToCosmosAsync(
-            ILogger <DumpAzureContainerRegistryToCosmosAsync> logger,
+            ILogger<DumpAzureContainerRegistryToCosmosAsync> logger,
             IRegistryClient regClient,
             ICosmosClient cosmosClient)
         {
@@ -37,8 +33,6 @@ namespace RegCleanerScheduler.Operations ;
         public async Task Invoke()
         {
             _logger.LogInformation($"invoked with {nameof(DumpAzureContainerRegistryAsync)}");
-            _logger.LogInformation("Starting Wait 30 sec for debugging");
-            await Task.Delay(30000);
 
             try
             {
@@ -60,48 +54,39 @@ namespace RegCleanerScheduler.Operations ;
         public async Task CreateCosmosDbIfNotExistAsync(
             CancellationToken cancellationToken,
             CosmosClient cosmostestClient = null,
-            string cosmostestsuffix = null,
-            string cosmosdbtestaccount = null,
             string cosmosdbtstname = null,
             bool istest = false
             )
         {
             if (!istest)
             {
-                _ = new GlobalSettings();
                 try
                 {
                     _logger.LogInformation($"Started operation {nameof(CreateCosmosDbIfNotExistAsync)}");
                     _logger.LogInformation($"Using endpoint https://{GlobalSettings.CosmosDbAccountName}.{GlobalSettings.CosmosSuffix}:443/");
                     var cclient = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken);
-                    var db = cclient.GetDatabase(GlobalSettings.CosmosDbName);
-                    if (db.Id != null)
+
+                    var result = await cclient.CreateDatabaseIfNotExistsAsync(
+                        GlobalSettings.CosmosDbName,
+                        GlobalSettings.CosmosThroughPut,
+                        cancellationToken: cancellationToken);
+                    _result = result;
+
+                    if (result.StatusCode == HttpStatusCode.Created)
                     {
-                        _logger.LogInformation($"DbName already exists{db.Id}");
+                        _logger.LogInformation($"{HttpStatusCode.Created}");
                     }
+                    if (result.StatusCode == HttpStatusCode.OK)
+                    {
+                        _logger.LogInformation($"{HttpStatusCode.OK}");
+                    }
+
                     else
                     {
-                        var result = await cclient.CreateDatabaseIfNotExistsAsync(
-                            GlobalSettings.CosmosDbName,
-                            GlobalSettings.CosmosThroughPut,
-                            cancellationToken: cancellationToken);
-                        _result = result;
-
-                        if (result.StatusCode == HttpStatusCode.Created)
-                        {
-                            _logger.LogInformation($"{HttpStatusCode.Created}");
-                        }
-                        if (result.StatusCode == HttpStatusCode.OK)
-                        {
-                            _logger.LogInformation($"{HttpStatusCode.OK}");
-                        }
-
-                        else
-                        {
-                            throw new AuthenticationException("Problem connecting to Cosmos");
-                        }
+                        throw new AuthenticationException("Problem connecting to Cosmos");
                     }
                 }
+
                 catch (Exception ex)
                 {
                     if (ex.Message.Contains("Name or service not known"))
@@ -138,7 +123,6 @@ namespace RegCleanerScheduler.Operations ;
         {
             if (!isTest)
             {
-                _ = new GlobalSettings();
                 try
                 {
                     _logger.LogInformation($"Started operation {nameof(CreateCosmosContainerIfNotExistAsync)}");

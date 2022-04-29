@@ -1,12 +1,10 @@
-﻿using System.Diagnostics;
-using Azure.Containers.ContainerRegistry;
+﻿using Azure.Containers.ContainerRegistry;
 using Coravel.Invocable;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json;
 
-namespace RegCleanerScheduler ;
+namespace RegCleanerScheduler;
 
-    public sealed class QueryImagesAndDeleteAsync : IInvocable
+public sealed class QueryImagesAndDeleteAsync : IInvocable
     {
         private readonly ILogger<QueryImagesAndDeleteAsync> _logger;
         private readonly ICosmosClient _cosmosclient;
@@ -129,8 +127,6 @@ namespace RegCleanerScheduler ;
 
         public async Task Invoke()
         {
-            _logger.LogInformation("Awaiting 30 sec for debugging");
-            await Task.Delay(30000);
             _logger.LogInformation($"{nameof(QueryAndDeleteAsync)} invoked");
 
             try
