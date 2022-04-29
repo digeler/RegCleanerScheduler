@@ -21,7 +21,7 @@ Dockerfile
 
 Params
 ----------
-`
+```
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -64,7 +64,7 @@ spec:
           - name:  "ScheduleDeleteImages"
             value: "The Time You Want To Executre The Delete Operaion e.g [0 23 * * 1] Default Every Monday At 23:00"
            
-`
+```
          
 
 
