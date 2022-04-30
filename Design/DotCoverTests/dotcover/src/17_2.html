@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>c:\repos\RegCleanerScheduler\Program.cs</title>
+    <script type="text/javascript" src="../js/dotcover.sourceview.js"></script>
+    <link rel="stylesheet" type="text/css" href="../css/dotcover.report.css" />
+  </head>
+  <body>
+    <pre id="content" class="source-code">
+using Coravel;
+using RegCleanerScheduler;
+using RegCleanerScheduler.Operations;
+
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices(
+        services =&gt;
+        {
+            services.AddScheduler();
+            services.AddLogging(
+                options =&gt;
+                {
+                    options.AddSimpleConsole(
+                        c =&gt;
+                        {
+                            c.TimestampFormat = &quot;[dd-MM-yyyy HH:mm:ss]&quot;;
+                            c.UseUtcTimestamp = true;
+                        });
+                });
+            services.AddSingleton&lt;GlobalSettings&gt;();
+            services.AddSingleton&lt;IRegistryClient, RegistryClient&gt;();
+            services.AddSingleton&lt;ICosmosClient, CosmosClients&gt;();
+            services.AddTransient&lt;DumpAzureContainerRegistryToCosmosAsync&gt;();
+            services.AddTransient&lt;QueryImagesAndDeleteAsync&gt;();
+        })
+    .Build();
+    host.Services.UseScheduler(
+        scheduler =&gt;
+        {
+            scheduler.OnWorker(&quot;DumpAzureContainerRegistryToCosmosAsync&quot;)
+                .Schedule&lt;DumpAzureContainerRegistryToCosmosAsync&gt;().
+                Cron(GlobalSettings.ScheduleDumpCron).PreventOverlapping(&quot;DumpAzureContainerRegistry&quot;);
+            scheduler.OnWorker(&quot;QueryImagesAndDeleteAsync&quot;).Schedule&lt;QueryImagesAndDeleteAsync&gt;().
+                Cron(GlobalSettings.ScheduleDeleteImages).PreventOverlapping(&quot;QueryAndDeleteImage&quot;);
+        }).OnError(ErrorHandling.HandleException);
+    await host.RunAsync();
+    </pre>
+    <script type="text/javascript">
+      highlightRanges([[5,1,9,13,0],[9,13,9,37,0],[9,37,10,13,0],[10,13,13,21,0],[13,21,16,29,0],[16,29,16,73,0],[16,73,17,29,0],[17,29,17,54,0],[17,54,18,25,0],[18,25,18,26,0],[18,26,18,28,0],[18,28,19,17,0],[19,17,19,18,0],[19,18,19,20,0],[19,20,20,13,0],[20,13,20,53,0],[20,53,21,13,0],[21,13,21,70,0],[21,70,22,13,0],[22,13,22,67,0],[22,67,23,13,0],[23,13,23,78,0],[23,78,24,13,0],[24,13,24,64,0],[24,64,25,9,0],[25,9,25,10,0],[25,10,26,14,0],[27,5,30,13,0],[30,13,32,104,0],[32,104,33,13,0],[33,13,34,101,0],[34,101,35,9,0],[35,9,35,10,0],[35,10,35,51,0],[36,5,36,27,0]]);
+    </script>
+  </body>
+</html>

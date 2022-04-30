@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>c:\repos\RegCleanerScheduler\Operations\QueryImagesAndDeleteAsync.cs</title>
+    <script type="text/javascript" src="../js/dotcover.sourceview.js"></script>
+    <link rel="stylesheet" type="text/css" href="../css/dotcover.report.css" />
+  </head>
+  <body>
+    <pre id="content" class="source-code">
+using Azure.Containers.ContainerRegistry;
+using Coravel.Invocable;
+using Microsoft.Azure.Cosmos;
+
+namespace RegCleanerScheduler;
+
+public sealed class QueryImagesAndDeleteAsync : IInvocable
+    {
+        private readonly ILogger&lt;QueryImagesAndDeleteAsync&gt; _logger;
+        private readonly ICosmosClient _cosmosclient;
+        private readonly IRegistryClient _registryclient;
+        private int _item = 0;
+        private Task&lt;ContainerRegistryClient&gt; _regclient;
+
+        public QueryImagesAndDeleteAsync(
+            ILogger&lt;QueryImagesAndDeleteAsync&gt; logger,
+            ICosmosClient cosmosClient,
+            IRegistryClient registryClient)
+        {
+            _logger = logger;
+            _cosmosclient = cosmosClient;
+            _registryclient = registryClient;
+        }
+
+        public async Task QueryAndDeleteAsync(
+            CancellationToken cancellationToken,
+            CosmosClient cosmosTestClient = null,
+            string cosmosdbtstname = null,
+            string cosmostestcontainername = null,
+            string monthsBack = null,
+            bool IsTesting = false
+            )
+        {
+            _regclient = _registryclient.GetContainerRegistryClientAsync(cancellationToken);
+
+            try
+            {
+                if (!IsTesting)
+                {
+                    _ = new GlobalSettings();
+                    var csclient = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken);
+                    var cosmoscontainer = csclient.GetDatabase(GlobalSettings.CosmosDbName).
+                        GetContainer(GlobalSettings.CosmosContainerName);
+
+                    _logger.LogInformation($&quot;Started operation {nameof(QueryAndDeleteAsync)} With Date {GlobalSettings.TimeAdjust} flag is {Convert.ToBoolean(GlobalSettings.IsDryRun)}&quot;);
+                    _logger.LogInformation($&quot;SELECT * FROM c where c.LastUpdated &lt; DateTimeAdd(&#39;month&#39;, {GlobalSettings.MonthsBack}, GetCurrentDateTime()) order by c.LastUpdated desc&quot;);
+                    using (var results = cosmoscontainer.GetItemQueryIterator&lt;ContainerRegistryModel&gt;(
+                        $&quot;SELECT * FROM c where c.LastUpdated &lt; DateTimeAdd(&#39;month&#39;, {GlobalSettings.MonthsBack}, GetCurrentDateTime()) order by c.LastUpdated desc&quot;,
+                        requestOptions: new QueryRequestOptions()
+                        {
+                            MaxConcurrency = 2,
+                            MaxItemCount = 10
+                        }))
+                    {
+                        while (results.HasMoreResults)
+                        {
+                            var response = await results.ReadNextAsync(cancellationToken);
+                            foreach (var iteModel in response)
+                            {
+                                {
+                                    if (Convert.ToBoolean(GlobalSettings.IsDryRun))
+                                    {
+                                        _logger.LogInformation($&quot;IsDryRun flag set to {GlobalSettings.IsDryRun} will not delete&quot;);
+                                        _logger.LogInformation(
+                                            $&quot;Dry run will delete the following images image id: {iteModel.id}&quot; +
+                                            $&quot;Last updated at {iteModel.LastUpdated}&quot;);
+                                        _logger.LogInformation($&quot;current items will be deleted {_item}&quot;);
+                                        _item++;
+                                    }
+                                    else
+                                    {
+                                        _logger.LogInformation($&quot;IsDryRun flag set to {GlobalSettings.IsDryRun} will delete&quot;);
+                                        _logger.LogInformation($&quot;Image id  to be deleted {iteModel.id} LastUpdatedOn {iteModel.LastUpdated}&quot;);
+                                        await cosmoscontainer.
+                                            DeleteItemAsync&lt;ContainerRegistryModel&gt;(
+                                                iteModel.id,
+                                                new PartitionKey(iteModel.LastUpdated),
+                                                cancellationToken: cancellationToken);
+
+                                        var regclientt = await _regclient;
+                                        var regoperation = regclientt.GetArtifact(iteModel.RepositoryName, iteModel.Tag).DeleteAsync(cancellationToken);
+                                        _logger.LogInformation($&quot;Deleted Image {iteModel.id} with {iteModel.LastUpdated} status: {regoperation.Status}&quot;);
+                                    }
+                                }
+                            }
+                        }
+                        _logger.LogInformation($&quot;Total items deleted {_item}&quot;);
+                    }
+                }
+                if (IsTesting)
+                {
+                    var csclient = cosmosTestClient;
+                    var cosmoscontainer = csclient.GetDatabase(cosmosdbtstname).
+                        GetContainer(cosmostestcontainername);
+                    using (var results = cosmoscontainer.GetItemQueryIterator&lt;ContainerRegistryModel&gt;(
+                        $&quot;SELECT * FROM c where c.LastUpdated &lt; DateTimeAdd(&#39;month&#39;, {monthsBack}, GetCurrentDateTime()) order by c.LastUpdated desc&quot;,
+                        requestOptions: new QueryRequestOptions()
+                        {
+                            MaxConcurrency = 1,
+                            MaxItemCount = 1
+                        }))
+                    {
+                        while (results.HasMoreResults)
+                        {
+                            var response = await results.ReadNextAsync(CancellationToken.None);
+                            foreach (var iteModel in response)
+                            {
+                                if (iteModel.LastUpdated.Length &gt; 0)
+                                {
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+                (CosmosException cx)
+            {
+                _logger.LogCritical($&quot;{cx.Diagnostics}\n {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.StatusCode} {cx.GetBaseException()}&quot;);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical($&quot;{ex.Message} \n {ex.StackTrace} \n {ex.InnerException}&quot;);
+            }
+        }
+
+        public async Task Invoke()
+        {
+            _logger.LogInformation($&quot;{nameof(QueryAndDeleteAsync)} invoked&quot;);
+
+            try
+            {
+                await QueryAndDeleteAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical($&quot;{ex.Message} \n {ex.StackTrace} \n {ex.InnerException}&quot;);
+            }
+        }
+    }
+    </pre>
+    <script type="text/javascript">
+      highlightRanges([[15,9,18,44,1],[20,13,20,30,1],[21,13,21,42,1],[22,13,22,46,1],[23,9,23,10,1],[34,13,34,93,1],[38,17,38,32,1],[40,21,40,46,0],[41,21,41,104,0],[42,21,43,74,0],[45,21,45,187,0],[46,21,46,186,0],[47,28,53,27,0],[55,25,55,55,0],[57,29,57,91,0],[58,38,58,50,0],[58,51,58,53,0],[58,54,58,62,0],[61,37,61,84,0],[63,41,63,131,0],[64,41,66,88,0],[67,41,67,106,0],[68,41,68,49,0],[72,41,72,127,0],[73,41,73,143,0],[74,41,78,87,0],[80,41,80,75,0],[81,41,81,153,0],[82,41,82,154,0],[85,29,85,30,0],[87,25,87,80,0],[88,21,88,22,0],[89,17,89,18,0],[90,17,90,31,1],[92,21,92,53,1],[93,21,94,63,1],[95,28,101,27,1],[103,25,103,55,1],[105,29,105,96,1],[106,38,106,50,1],[106,51,106,53,1],[106,54,106,62,1],[108,33,108,69,1],[110,37,110,44,1],[114,21,114,22,0],[116,13,116,14,0],[117,13,118,37,0],[120,17,120,145,0],[121,13,121,14,0],[122,13,122,33,0],[124,17,124,96,0],[125,13,125,14,0],[126,9,126,10,1],[130,13,130,78,0],[134,17,134,67,0],[135,13,135,14,0],[136,13,136,33,0],[138,17,138,96,0],[139,13,139,14,0],[140,9,140,10,0]]);
+    </script>
+  </body>
+</html>

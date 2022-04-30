@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>c:\repos\RegCleanerScheduler\RegCleanerTests\Tests\CreateCosmosContainerIfNotExistAsync_Test.cs</title>
+    <script type="text/javascript" src="../js/dotcover.sourceview.js"></script>
+    <link rel="stylesheet" type="text/css" href="../css/dotcover.report.css" />
+  </head>
+  <body>
+    <pre id="content" class="source-code">
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using RegCleanerScheduler;
+using RegCleanerScheduler.Operations;
+using Xunit;
+
+namespace Tests ;
+
+    public class CreateCosmosContainerIfNotExistAsync_Test
+    {
+    
+        private readonly ILogger&lt;CosmosClients&gt; _loggercosmos;
+        private readonly ILogger&lt;RegistryClient&gt; _loggerregistry;
+        private readonly ILogger&lt;DumpAzureContainerRegistryToCosmosAsync&gt; _dumpAzureContainerRegistryToCosmosAsynclogger;
+
+        public CreateCosmosContainerIfNotExistAsync_Test()
+        {
+            _loggercosmos = new NullLogger&lt;CosmosClients&gt;();
+            _loggerregistry = new NullLogger&lt;RegistryClient&gt;();
+            _dumpAzureContainerRegistryToCosmosAsynclogger= new NullLogger&lt;DumpAzureContainerRegistryToCosmosAsync&gt;();
+    }
+
+        [Fact]
+        public async Task CreateCosmosContainerIfNotExistAsync_Should_Return_Ok()
+        {
+            var ts = new TestSettings();
+            try
+            {
+                var cl = new CosmosClients(_loggercosmos);
+                var cosmosClient = await cl.GetCosmosClientAsyncForTestingOnly(
+                    TestSettings.AzureManagmentSuffix,
+                    TestSettings.SubscriptionId,
+                    TestSettings.ResourceGroup,
+                    TestSettings.CosmosDbAccountName,
+                    TestSettings.CosmosSuffix,
+                    CancellationToken.None);
+
+                var rl = new RegistryClient(_loggerregistry);
+                await rl.GetContainerRegistryClientAsync(CancellationToken.None, TestSettings.RegEndpoint, &quot;Public&quot;);
+                var ds = new DumpAzureContainerRegistryToCosmosAsync(_dumpAzureContainerRegistryToCosmosAsynclogger, rl, cl);
+                await Task.Run(
+                    async () =&gt; await ds.CreateCosmosContainerIfNotExistAsync(
+                        CancellationToken.None,
+                        cosmosClient,
+                        TestSettings.CosmosDbName,
+                        TestSettings.CosmosContainerName,
+                        TestSettings.CosmosPartitionKey,
+                        TestSettings.CosmosDbAccountName,
+                        true));
+            }
+            catch (Exception ex)
+            {
+               Assert.Empty(ex.Message); 
+            }
+        }
+    }
+    </pre>
+    <script type="text/javascript">
+      highlightRanges([[19,9,19,59,1],[21,13,21,61,1],[22,13,22,64,1],[23,13,23,119,1],[24,5,24,6,1],[29,13,29,41,1],[32,17,32,59,1],[33,17,39,45,1],[41,17,41,62,1],[42,17,42,118,1],[43,17,43,126,1],[44,17,45,33,1],[45,33,52,30,1],[52,30,52,32,1],[53,13,53,14,1],[54,13,54,33,0],[56,16,56,41,0],[57,13,57,14,0],[58,9,58,10,1]]);
+    </script>
+  </body>
+</html>

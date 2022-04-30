@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>c:\repos\RegCleanerScheduler\RegCleanerTests\Tests\QueryAndDelete_Test.cs</title>
+    <script type="text/javascript" src="../js/dotcover.sourceview.js"></script>
+    <link rel="stylesheet" type="text/css" href="../css/dotcover.report.css" />
+  </head>
+  <body>
+    <pre id="content" class="source-code">
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using RegCleanerScheduler;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace Tests ;
+
+    public sealed class QueryAndDelete_Test
+    {
+        private readonly ITestOutputHelper _testOutputHelper;
+        private readonly ILogger&lt;CosmosClients&gt; _loggercosmos;
+        private readonly ILogger&lt;RegistryClient&gt; _loggerregistry;
+        private readonly ILogger&lt;QueryImagesAndDeleteAsync&gt; _queryimageanddeletelogger;
+
+    public QueryAndDelete_Test(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+            _loggercosmos = new NullLogger&lt;CosmosClients&gt;();
+            _loggerregistry = new NullLogger&lt;RegistryClient&gt;();
+            _queryimageanddeletelogger =  new NullLogger&lt;QueryImagesAndDeleteAsync&gt;();
+    }
+
+        [Fact]
+        public async Task QueryAndDelete_Should_Return_Ok()
+        {
+            var ts = new TestSettings();
+            try
+            {
+                var cl = new CosmosClients(_loggercosmos);
+                var cosmosClient = await cl.GetCosmosClientAsyncForTestingOnly(
+                    TestSettings.AzureManagmentSuffix,
+                    TestSettings.SubscriptionId,
+                    TestSettings.ResourceGroup,
+                    TestSettings.CosmosDbAccountName,
+                    TestSettings.CosmosSuffix,
+                    CancellationToken.None);
+
+                var rl = new RegistryClient(_loggerregistry);
+                var regc = await rl.GetContainerRegistryClientAsync(CancellationToken.None, TestSettings.RegEndpoint, &quot;Public&quot;);
+                var qanddelete = new QueryImagesAndDeleteAsync( _queryimageanddeletelogger, cl, rl);
+                await Task.Run(()=&gt;
+                 qanddelete.QueryAndDeleteAsync(
+                    CancellationToken.None,
+                     cosmosClient,
+                    TestSettings.CosmosDbName,
+                    TestSettings.CosmosContainerName,
+                    TestSettings.MonthsBack,
+                    true));
+            }
+            catch (Exception ex)
+            {
+                _testOutputHelper.WriteLine(ex.Message);
+                Assert.Empty(ex.GetBaseException().HResult.ToString());
+            }
+        }
+    }
+    </pre>
+    <script type="text/javascript">
+      highlightRanges([[19,5,19,67,1],[21,13,21,50,1],[22,13,22,61,1],[23,13,23,64,1],[24,13,24,87,1],[25,5,25,6,1],[30,13,30,41,1],[33,17,33,59,1],[34,17,40,45,1],[42,17,42,62,1],[43,17,43,129,1],[44,17,44,101,1],[45,17,46,18,1],[46,18,52,26,1],[52,26,52,28,1],[53,13,53,14,1],[54,13,54,33,0],[56,17,56,57,0],[57,17,57,72,0],[58,13,58,14,0],[59,9,59,10,1]]);
+    </script>
+  </body>
+</html>

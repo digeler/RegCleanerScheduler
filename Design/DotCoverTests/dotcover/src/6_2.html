@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>c:\repos\RegCleanerScheduler\ClientsSettings\GlobalSettings.cs</title>
+    <script type="text/javascript" src="../js/dotcover.sourceview.js"></script>
+    <link rel="stylesheet" type="text/css" href="../css/dotcover.report.css" />
+  </head>
+  <body>
+    <pre id="content" class="source-code">
+namespace RegCleanerScheduler ;
+
+public  class GlobalSettings
+    {
+        public  static string CosmosDbAccountName { get; } = Environment.GetEnvironmentVariable(&quot;CosmosDbAccountName&quot;) ?? throw new Exception(&quot;CosmosDbAccountName Env Missing&quot;);
+        public static string CosmosDbName { get; } = Environment.GetEnvironmentVariable(&quot;CosmosDbName&quot;) ?? throw new Exception(&quot;CosmosDbName Env Missing&quot;);
+        public static Uri RegEndpoint { get; } = new(Environment.GetEnvironmentVariable(&quot;RegEndpoint&quot;) ?? throw new Exception(&quot;RegEndpoint Env Missing&quot;));
+        public static string AzureManagmentSuffix { get; } = Environment.GetEnvironmentVariable(&quot;AzureManagmentSuffix&quot;) ?? &quot;azure.com&quot;;
+        public static string Audience { get; } = Environment.GetEnvironmentVariable(&quot;Audience&quot;) ?? &quot;Public&quot;;
+        public static string SubscriptionId { get; } = Environment.GetEnvironmentVariable(&quot;SubscriptionId&quot;) ?? throw new Exception(&quot;Subid Env Missing&quot;);
+        public static string ResourceGroup { get; } = Environment.GetEnvironmentVariable(&quot;ResourceGroup&quot;) ?? throw new Exception(&quot;ResourceGroup Env Missing&quot;);
+        public static string CosmosContainerName { get; } = Environment.GetEnvironmentVariable(&quot;CosmosContainerName&quot;) ?? &quot;AcrContainer&quot;;
+        public static int CosmosThroughPut = Convert.ToInt32(Environment.GetEnvironmentVariable(&quot;CosmosThroughPut&quot;) ?? 1000.ToString());
+        public static string CosmosSuffix { get; } = new(Environment.GetEnvironmentVariable(&quot;CosmosSuffix&quot;) ?? &quot;documents.azure.com&quot;);
+        public static string IsDryRun { get; } = Environment.GetEnvironmentVariable(&quot;IsDryRun&quot;) ?? &quot;True&quot;;
+        public static string MonthsBack { get; } = Environment.GetEnvironmentVariable(&quot;MonthsBack&quot;) ?? &quot;36&quot;;
+        public static DateTimeOffset TimeAdjust { get; set; } = DateTime.Now.AddMonths(Convert.ToInt32(MonthsBack));
+        public static string CosmosPartitionKey { get; } = &quot;/LastUpdated&quot;;
+        public static string ScheduleDumpCron { get; } = Environment.GetEnvironmentVariable(&quot;ScheduleDumpCron&quot;) ?? &quot;0 23 * * 0&quot;;
+        public static string ScheduleDeleteImages { get; } = Environment.GetEnvironmentVariable(&quot;ScheduleDeleteImages&quot;) ?? &quot;0 23 * * 1&quot;;
+
+        static GlobalSettings()
+        {
+            
+        }
+    }
+    </pre>
+    <script type="text/javascript">
+      highlightRanges([[5,53,5,57,0],[5,62,5,177,1],[6,45,6,49,0],[6,54,6,155,0],[7,41,7,45,0],[7,50,7,154,0],[8,53,8,57,0],[8,62,8,135,0],[9,41,9,45,0],[9,50,9,108,0],[10,47,10,51,0],[10,56,10,152,0],[11,46,11,50,0],[11,55,11,158,0],[12,52,12,56,0],[12,61,12,136,0],[13,9,13,137,0],[14,45,14,49,0],[14,54,14,134,0],[15,41,15,45,0],[15,50,15,106,0],[16,43,16,47,0],[16,52,16,108,0],[17,51,17,55,0],[17,56,17,60,0],[17,65,17,116,0],[18,51,18,55,0],[18,60,18,74,0],[19,49,19,53,0],[19,58,19,128,0],[20,53,20,57,0],[20,62,20,136,0],[25,9,25,10,0]]);
+    </script>
+  </body>
+</html>

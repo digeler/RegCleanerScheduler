@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>c:\repos\RegCleanerScheduler\Operations\DumpAzureContainerRegistryToCosmosAsync.cs</title>
+    <script type="text/javascript" src="../js/dotcover.sourceview.js"></script>
+    <link rel="stylesheet" type="text/css" href="../css/dotcover.report.css" />
+  </head>
+  <body>
+    <pre id="content" class="source-code">
+using Azure.Containers.ContainerRegistry;
+using Coravel.Invocable;
+using Microsoft.Azure.Cosmos;
+using System.Net;
+using System.Security.Authentication;
+
+namespace RegCleanerScheduler.Operations ;
+
+    public class DumpAzureContainerRegistryToCosmosAsync : IInvocable
+    {
+        private readonly ILogger&lt;DumpAzureContainerRegistryToCosmosAsync&gt; _logger;
+        private readonly IRegistryClient _regclient;
+        private readonly ICosmosClient _cosmosclient;
+        private readonly ContainerRegistryModel _registrymodel;
+        private int _items = 0;
+        private int _interval = 0;
+
+        private DatabaseResponse _result;
+
+        private ContainerResponse _comoscontainer;
+
+        public DumpAzureContainerRegistryToCosmosAsync(
+            ILogger&lt;DumpAzureContainerRegistryToCosmosAsync&gt; logger,
+            IRegistryClient regClient,
+            ICosmosClient cosmosClient)
+        {
+            _logger = logger;
+            _regclient = regClient;
+            _cosmosclient = cosmosClient;
+            _registrymodel = new ContainerRegistryModel();
+        }
+
+        public async Task Invoke()
+        {
+            _logger.LogInformation($&quot;invoked with {nameof(DumpAzureContainerRegistryAsync)}&quot;);
+
+            try
+            {
+                await DumpAzureContainerRegistryAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical($&quot;{ex.Message} \n {ex.StackTrace} \n {ex.InnerException} \n&quot;);
+            }
+        }
+
+        public async Task DumpAzureContainerRegistryAsync(CancellationToken cancellationToken)
+        {
+            await CreateCosmosDbIfNotExistAsync(cancellationToken);
+            await CreateCosmosContainerIfNotExistAsync(cancellationToken);
+            await DumpToCosmosAsync(cancellationToken);
+        }
+
+        public async Task CreateCosmosDbIfNotExistAsync(
+            CancellationToken cancellationToken,
+            CosmosClient cosmostestClient = null,
+            string cosmosdbtstname = null,
+            bool istest = false
+            )
+        {
+            if (!istest)
+            {
+                try
+                {
+                    _logger.LogInformation($&quot;Started operation {nameof(CreateCosmosDbIfNotExistAsync)}&quot;);
+                    _logger.LogInformation($&quot;Using endpoint https://{GlobalSettings.CosmosDbAccountName}.{GlobalSettings.CosmosSuffix}:443/&quot;);
+                    var cclient = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken);
+
+                    var result = await cclient.CreateDatabaseIfNotExistsAsync(
+                        GlobalSettings.CosmosDbName,
+                        GlobalSettings.CosmosThroughPut,
+                        cancellationToken: cancellationToken);
+                    _result = result;
+
+                    if (result.StatusCode == HttpStatusCode.Created)
+                    {
+                        _logger.LogInformation($&quot;{HttpStatusCode.Created}&quot;);
+                    }
+                    if (result.StatusCode == HttpStatusCode.OK)
+                    {
+                        _logger.LogInformation($&quot;{HttpStatusCode.OK}&quot;);
+                    }
+
+                    else
+                    {
+                        throw new AuthenticationException(&quot;Problem connecting to Cosmos&quot;);
+                    }
+                }
+
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains(&quot;Name or service not known&quot;))
+                    {
+                        _logger.LogCritical(&quot;Please create cosmos account&quot;);
+                    }
+                    _logger.LogError($&quot;{ex.Message}\n {ex.StackTrace} \n {ex.StackTrace} \n {ex.InnerException} \n&quot;);
+                    _logger.LogInformation($&quot;Diagnostics: {_result.Diagnostics}&quot;);
+                    await Task.Delay(10000);
+                    _logger.LogInformation(&quot;Retrying connect to cosmos&quot;);
+                    await DumpAzureContainerRegistryAsync(cancellationToken);
+                }
+
+                _logger.LogInformation($&quot;Finished {nameof(CreateCosmosDbIfNotExistAsync)} DbName: {GlobalSettings.CosmosDbName}&quot;);
+            }
+            if (istest)
+            {
+                var result = await cosmostestClient.CreateDatabaseIfNotExistsAsync(
+                    cosmosdbtstname,
+                    1000,
+                    cancellationToken: cancellationToken);
+                _result = result;
+            }
+        }
+
+        public async Task CreateCosmosContainerIfNotExistAsync(
+            CancellationToken cancellationToken,
+            CosmosClient testClient = null,
+            string cosmosdbtstname = null,
+            string cosmostestcontainername = null,
+            string cosmosdbtestpartitionkey = null,
+            string cosmosdbaccountname = null,
+            bool isTest = false)
+        {
+            if (!isTest)
+            {
+                try
+                {
+                    _logger.LogInformation($&quot;Started operation {nameof(CreateCosmosContainerIfNotExistAsync)}&quot;);
+                    var cosmos = await _cosmosclient.GetCosmosClientWithKeysAsync(cancellationToken);
+                    var cosmoscontainer = await cosmos.GetDatabase(GlobalSettings.CosmosDbName).
+                        CreateContainerIfNotExistsAsync(
+                            new ContainerProperties(
+                                GlobalSettings.CosmosContainerName,
+                                GlobalSettings.CosmosPartitionKey),
+                            cancellationToken: cancellationToken);
+
+                    if (cosmoscontainer.StatusCode == HttpStatusCode.Created)
+                    {
+                        _logger.LogInformation($&quot;{HttpStatusCode.Created}&quot;);
+                    }
+                    if (cosmoscontainer.StatusCode == HttpStatusCode.OK)
+                    {
+                        _logger.LogInformation($&quot;{HttpStatusCode.OK}&quot;);
+                    }
+
+                    _comoscontainer = cosmoscontainer;
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains(&quot;Resource Not Found&quot;))
+                    {
+                        _logger.LogError($&quot;Resource not found will try 5 times in 5 sec intervals&quot;);
+                        while (_interval &lt;= 5)
+                        {
+                            await CreateCosmosContainerIfNotExistAsync(cancellationToken);
+                            await Task.Delay(5000, cancellationToken);
+                            _interval++;
+                            _logger.LogInformation($&quot;Itration {_interval}&quot;);
+                            _logger.LogError($&quot;{ex.Message}\n {ex.StackTrace} \n {ex.StackTrace} \n {ex.InnerException} \n&quot;);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError($&quot;{ex.Message} \n {ex.InnerException} \n {ex.StackTrace} \n&quot;);
+                    }
+                }
+
+                _logger.LogInformation($&quot;Finished {nameof(CreateCosmosContainerIfNotExistAsync)} DbName: {GlobalSettings.CosmosDbAccountName ?? cosmosdbaccountname} Container Name: {GlobalSettings.CosmosContainerName ?? cosmostestcontainername}&quot;);
+            }
+            if (isTest)
+            {
+                try
+                {
+                    await testClient.GetDatabase(cosmosdbtstname).
+                        CreateContainerIfNotExistsAsync(
+                            new ContainerProperties(
+                                cosmostestcontainername,
+                                cosmosdbtestpartitionkey),
+                            cancellationToken: cancellationToken);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public async Task DumpToCosmosAsync(CancellationToken cancellationToken, ContainerRegistryClient containertestclient = null, bool isTesting = false)
+        {
+            _logger.LogInformation($&quot;Started operation {nameof(DumpToCosmosAsync)}&quot;);
+            var tasks = new List&lt;Task&gt;();
+            var _rclient = containertestclient ?? await _regclient.GetContainerRegistryClientAsync(cancellationToken);
+            var acrrepolist = _rclient.GetRepositoryNamesAsync(cancellationToken);
+            if (!isTesting)
+            {
+                await foreach (var repo in acrrepolist)
+                {
+                    await foreach (var repoproperties in _rclient.GetRepository(repo).GetManifestPropertiesCollectionAsync())
+                    {
+                        foreach (var tag in repoproperties.Tags)
+                        {
+                            _logger.LogInformation(
+                                $&quot;Repo Name: {repoproperties.RepositoryName} \n &quot; +
+                                $&quot;Tag: {tag} \n &quot; +
+                                $&quot;Last Updated: {repoproperties.LastUpdatedOn} \n &quot;);
+                            _registrymodel.id = $&quot;{repoproperties.RepositoryName}:{tag}&quot;;
+                            _registrymodel.LastUpdated = repoproperties.LastUpdatedOn.ToString(&quot;s&quot;);
+                            _registrymodel.Tag = tag;
+                            _registrymodel.RepositoryName = repoproperties.RepositoryName;
+                            _items++;
+
+                            var task = _comoscontainer.Container.CreateItemAsync(_registrymodel, cancellationToken: cancellationToken);
+
+                            try
+                            {
+                                tasks.Add(
+                                    task.ContinueWith(
+                                        t =&gt;
+                                        {
+                                            if (t.Status == TaskStatus.RanToCompletion)
+                                            {
+                                                _logger.LogInformation(t.Status.ToString());
+                                            }
+                                            else
+                                            {
+                                                _logger.LogError(t.Exception?.GetBaseException().ToString());
+                                            }
+                                        },
+                                        cancellationToken));
+
+                                _logger.LogInformation($&quot;Dump completed with status code {task.Status}&quot;);
+                            }
+                            catch (CosmosException cx)
+                            {
+                                _logger.LogCritical($&quot;{cx.Diagnostics}\n {cx.Message} {cx.StackTrace} {cx.StackTrace} {cx.StatusCode} {cx.GetBaseException()}&quot;);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.Message.Contains(&quot;Entity with the specified id already exists in the system&quot;))
+                                {
+                                    _logger.LogInformation($&quot;Conflict 409 for {_registrymodel.id}&quot;);
+                                }
+                                if (ex.Message.Contains(&quot;A task was canceled&quot;))
+                                {
+                                    _logger.LogInformation(&quot;A task was cancelled&quot;);
+                                }
+                                else
+                                {
+                                    _logger.LogCritical($&quot;{ex.Message} \n {ex.InnerException} \n {ex.StackTrace} {ex.GetBaseException()}&quot;);
+                                }
+                            }
+                        }
+                    }
+                }
+                await Task.WhenAll(tasks);
+                _logger.LogInformation($&quot;Total items that was dumped {_items}&quot;);
+            }
+            if (isTesting)
+            {
+                await foreach (var repo in acrrepolist)
+                {
+                    if (repo.Length &gt; 0)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    </pre>
+    <script type="text/javascript">
+      highlightRanges([[22,9,25,40,1],[27,13,27,30,1],[28,13,28,36,1],[29,13,29,42,1],[30,13,30,59,1],[31,9,31,10,1],[35,13,35,95,0],[39,17,39,79,0],[40,13,40,14,0],[41,13,41,33,0],[43,17,43,99,0],[44,13,44,14,0],[45,9,45,10,0],[49,13,49,68,0],[50,13,50,75,0],[51,13,51,56,0],[52,9,52,10,0],[61,13,61,25,1],[65,21,65,106,0],[66,21,66,143,0],[67,21,67,103,0],[69,21,72,63,0],[73,21,73,38,0],[75,21,75,69,0],[77,25,77,77,0],[79,21,79,64,0],[81,25,81,72,0],[86,25,86,91,0],[88,17,88,18,0],[90,17,90,37,0],[92,21,92,74,0],[94,25,94,77,0],[96,21,96,118,0],[97,21,97,83,0],[98,21,98,45,0],[99,21,99,74,0],[100,21,100,78,0],[103,17,103,131,0],[105,13,105,24,1],[107,17,110,59,1],[111,17,111,34,1],[113,9,113,10,1],[124,13,124,25,1],[128,21,128,113,0],[129,21,129,102,0],[130,21,135,67,0],[137,21,137,78,0],[139,25,139,77,0],[141,21,141,73,0],[143,25,143,72,0],[146,21,146,55,0],[147,17,147,18,0],[148,17,148,37,0],[150,21,150,67,0],[152,25,152,101,0],[153,25,153,47,0],[155,29,155,91,0],[156,29,156,71,0],[157,29,157,41,0],[158,29,158,77,0],[159,29,159,126,0],[164,25,164,104,0],[166,17,166,18,0],[168,17,168,248,0],[170,13,170,24,1],[174,21,179,67,1],[180,17,180,18,1],[181,17,181,34,0],[183,21,183,27,0],[186,9,186,10,1],[190,13,190,86,1],[191,13,191,42,1],[192,13,192,119,1],[193,13,193,83,1],[194,13,194,28,1],[196,32,196,40,0],[196,41,196,43,0],[196,44,196,55,0],[198,36,198,54,0],[198,55,198,57,0],[198,58,198,125,0],[200,34,200,41,0],[200,42,200,44,0],[200,45,200,64,0],[202,29,205,86,0],[206,29,206,90,0],[207,29,207,101,0],[208,29,208,54,0],[209,29,209,91,0],[210,29,210,38,0],[212,29,212,136,0],[216,33,220,45,0],[220,45,220,88,0],[220,88,222,49,0],[222,49,222,93,0],[222,93,226,49,0],[226,49,226,110,0],[226,110,228,41,0],[228,41,228,42,0],[228,42,229,61,0],[231,33,231,106,0],[232,29,232,30,0],[233,29,233,55,0],[235,33,235,161,0],[236,29,236,30,0],[237,29,237,49,0],[239,33,239,118,0],[241,37,241,101,0],[243,33,243,80,0],[245,37,245,84,0],[249,37,249,140,0],[251,29,251,30,0],[255,17,255,43,0],[256,17,256,81,0],[258,13,258,27,1],[260,32,260,40,1],[260,41,260,43,1],[260,44,260,55,1],[262,21,262,41,1],[268,9,268,10,1]]);
+    </script>
+  </body>
+</html>
