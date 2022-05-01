@@ -19,8 +19,5 @@ public  class GlobalSettings
         public static string ScheduleDumpCron { get; } = Environment.GetEnvironmentVariable("ScheduleDumpCron") ?? "0 23 * * 0";
         public static string ScheduleDeleteImages { get; } = Environment.GetEnvironmentVariable("ScheduleDeleteImages") ?? "0 23 * * 1";
 
-        static GlobalSettings()
-        {
-            
-        }
+       
     }
